@@ -19,21 +19,27 @@ function install_system_tools() {
 # Add a repository to yum so that we can download
 # supported version of docker.
 function add_docker_yum_repo() {
-   tee /etc/yum.repos.d/docker.repo <<-'EOF'
-[dockerrepo]
-name=Docker Repository
-baseurl=https://yum.dockerproject.org/repo/main/centos/7/
-enabled=1
-gpgcheck=1
-gpgkey=https://yum.dockerproject.org/gpg
-EOF
+  yum-config-manager \
+    --add-repo \
+    https://download.docker.com/linux/centos/docker-ce.repo
 }
 
 # Set up yum and install the supported version of docker
 function install_docker() {
    add_docker_yum_repo
-
-   yum -y install docker-engine-1.10.3 docker-engine-selinux-1.10.3
+   yum remove -y docker \
+    docker-client \
+    docker-client-latest \
+    docker-common \
+    docker-latest \
+    docker-latest-logrotate \
+    docker-logrotate \
+    docker-selinux \
+    docker-engine-selinux \
+    docker-engine
+   yum install -y yum-utils \
+  device-mapper-persistent-data \
+  lvm2 docker-ce
 }
 
 # Set docker daemon comand line options. We modify systemd configuration
@@ -42,13 +48,7 @@ function install_docker() {
 # overrides any existing options supplied by the RPM. This is overridden to
 # make sure docker is listening on all network interfaces.
 function set_docker_daemon_options() {
-   echo "" > /etc/sysconfig/docker
-   mkdir -p /etc/systemd/system/docker.service.d
-   tee /etc/systemd/system/docker.service.d/docker.conf <<-'EOF'
-[Service]
-ExecStart=
-ExecStart=/usr/bin/docker daemon --selinux-enabled -H unix:///var/run/docker.sock -H tcp://0.0.0.0:2375
-EOF
+  echo "Done"
 }
 
 # configure_and_start_docker starts the docker service using systemctl
@@ -174,11 +174,14 @@ export KUBERNETES_PROVIDER=local
 export API_HOST=${guestIp}
 # So you can access apiserver from kubectl in the VM.
 export KUBERNETES_MASTER=\${API_HOST}:8080
+# Always point to the local up cluster
+export KUBECONFIG=/var/run/kubernetes/admin.kubeconfig
 
 # For convenience.
 alias k="cd \$GOPATH/src/k8s.io/kubernetes"
 alias killcluster="ps axu|grep -e go/bin -e etcd |grep -v grep | awk '{print \\\$2}' | xargs kill"
 alias kstart="k && killcluster; hack/local-up-cluster.sh"
+alias kubectl="\$GOPATH/src/k8s.io/kubernetes/cluster/kubectl.sh"
 EOL
 }
 
@@ -210,7 +213,7 @@ install_go "1.10.1"
 install_etcd "v3.2.18"
 
 # HOST_GOPATH is passed by the VagrantFile looking at the Mac's environment.
-GUEST_GOPATH=/home/vagrant/gopath
+GUEST_GOPATH=/home/vagrant/go
 setup_gopath "${HOST_GOPATH}" "${GUEST_GOPATH}"
 # The rest of the script installed some gobinaries. So the GOPATH needs to be known
 # from this point on .
@@ -225,9 +228,6 @@ echo "127.0.0.1 localhost" >> /etc/hosts
 
 # kubelet complains if this directory doesn't exist.
 mkdir -p /var/lib/kubelet
-
-# The NFS mount is initially owned by root - it should be owned by vagrant.
-chown vagrant.vagrant /Users
 
 echo "Setup complete."
 

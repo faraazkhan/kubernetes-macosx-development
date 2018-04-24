@@ -5,7 +5,7 @@ $expose_docker_tcp=true
 
 # Mount your OS X gopath src directory into the image.
 # Enter the full gopath here.
-$gopath = "/Users/faraaz/Developer/Go/src"
+$gopath = "/Users/faraaz/Developer/Go"
 
 # Setting for VirtualBox VMs
 #$vb_gui = false

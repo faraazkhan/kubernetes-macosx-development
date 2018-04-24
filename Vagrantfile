@@ -13,8 +13,8 @@ $gopath = ""
 $expose_docker_tcp = true
 $mount_users_dir = true
 $vb_gui = false
-$vb_memory = 1024
-$vb_cpus = 1
+$vb_memory = 4096
+$vb_cpus = 4
 $home = ENV["HOME"]
 
 if File.exist?(CONFIG)
@@ -48,8 +48,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |c|
       config.vm.network "forwarded_port", guest: 2375, host: 2375, auto_correct: true
     end
 
-    if $mount_users_dir
-      config.vm.synced_folder $home, $home, type: "nfs"
+    if $gopath
+      config.vm.synced_folder "#{$gopath}/src/k8s.io", "/home/vagrant/go/src/k8s.io", type: "virtualbox"
     end
 
     config.vm.provider :virtualbox do |vb|
